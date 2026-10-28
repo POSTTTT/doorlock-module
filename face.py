@@ -105,9 +105,8 @@ def scan(app, cam, want, need_liveness, timeout=10.0, show=None, space=0.0):
             if face is not None:
                 x1, y1, x2, y2 = face.bbox.astype(int)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0) if good else (0, 0, 255), 2)
-            msg = f"{len(embs)}/{want} " + ("live" if live else "turn head left and right")
-            cv2.putText(frame, msg, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-            show(frame)
+            show(frame, {"shots": min(len(embs), want), "want": want, "live": bool(live),
+                         "face": face is not None, "good": bool(good)})
         if len(embs) >= want and live:
             return embs, True
     return embs, not need_liveness or (len(yaws) > 1 and max(yaws) - min(yaws) >= MIN_YAW_RANGE)
@@ -155,7 +154,9 @@ class FaceModule:
         return result
 
 
-def window(frame):
+def window(frame, info):
+    msg = f"{info['shots']}/{info['want']} " + ("live" if info["live"] else "turn head left and right")
+    cv2.putText(frame, msg, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     cv2.imshow("face", frame)
     cv2.waitKey(1)
 

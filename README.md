@@ -34,12 +34,16 @@ On macOS, the first scan asks for camera permission for your terminal app (Termi
 .venv/bin/uvicorn api:app --port 8000
 ```
 
-Open http://localhost:8000. There are two pages, linked at the top right. **Door** (`/`) has the door check and the door PIN. **Registration** (`/register`) has enrollment and the recent attempts. Each page shows the camera view on the left and a result banner under it. The camera only turns on while a scan is running.
+Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the door PIN setup and the recent attempts. Both are linked at the top right. Each of them shows the camera view on the left and a result banner under it. The camera only turns on while a scan is running.
+
+**Registration lock**
+
+Once a door PIN is set, the Registration page is locked with the same passcode. Opening it shows the passcode keypad first. A correct passcode opens Registration for 15 minutes. Click **Lock** at the top to close it sooner. Restarting the server also locks it. Until the first PIN is set, Registration stays open so that you can set one.
 
 **Enroll a person**
 
-1. Open the **Registration** page.
-2. Type a name. The role is optional and defaults to `user`.
+1. Open the **Registration** page. Once a door PIN is set, it first asks for that passcode.
+2. Type a name. People enrolled from the page get the role `user`. To set another role, use the command line or the API.
 3. Click **Enroll person** and look at the camera.
 4. Move your head a little and change your expression while it takes 8 shots, about 0.4 s apart.
 5. Watch the box around your face. It is green when the frame is good enough to use, and red when the face is too small, blurry, or too dark or bright.
@@ -47,7 +51,7 @@ Open http://localhost:8000. There are two pages, linked at the top right. **Door
 
 **Door check**
 
-1. Open the **Door** page and click **Start door check**.
+1. On the home page, click **Start door unlock**. The Door page opens and the face check starts right away. To run it again, click **Door** at the top right.
 2. Face the camera and slowly turn your head left, then right.
 3. The banner shows one of these results:
 
@@ -60,7 +64,7 @@ Open http://localhost:8000. There are two pages, linked at the top right. **Door
 
 **Door PIN**
 
-If the face check fails, type the door PIN in the **Door PIN** panel on the Door page and click **Unlock with PIN**.
+If the face check fails, click **Enter passcode** at the top of the home page or the Door page. Tap the digits on the keypad, or type them, then tap the check mark or press Enter. A correct passcode returns you to the home page after 2 s.
 
 To set the PIN the first time, open the **Registration** page. In the **Door PIN** panel, type a new PIN of 4 to 12 digits twice and click **Set PIN**. To change it later, use the same panel: it then asks for the current PIN as well, and the button reads **Change PIN**.
 
@@ -86,13 +90,17 @@ The server listens on the port you gave to uvicorn. Interactive docs are at http
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| POST | `/enroll` | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if not enough good shots were captured |
+| POST | `/login` | `{"pin": "4821"}` | `{"ok": true}` and a `session` cookie that unlocks the locked endpoints for 15 min; 403 if wrong |
+| POST | `/logout` | none | Ends the session |
+| POST | `/enroll` 🔒 | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if not enough good shots were captured |
 | POST | `/recognize` | none | `{"result": "granted", "user_id": 1, "name": "Alice", "score": 0.62}` |
 | POST | `/unlock` | `{"pin": "4821"}` | `{"result": "granted"}` or `{"result": "denied"}`; 429 after 5 wrong PINs, 503 if no PIN is set |
 | GET | `/pin` | none | `{"set": true}` if a door PIN is set |
-| POST | `/pin` | `{"current": "4821", "new": "5930"}` | `{"set": true}`; `current` is needed only when a PIN is already set; 403 if it is wrong, 422 if `new` is not 4 to 12 digits |
-| GET | `/logs` | none | The last 20 attempts, each with `method` (`face` or `password`) |
-| GET | `/preview.jpg` | none | The latest camera frame during a scan, or 404 |
+| POST | `/pin` 🔒 | `{"current": "4821", "new": "5930"}` | `{"set": true}`; `current` is needed only when a PIN is already set; 403 if it is wrong, 422 if `new` is not 4 to 12 digits |
+| GET | `/logs` 🔒 | none | The last 20 attempts, each with `method` (`face` or `password`) |
+| GET | `/preview.jpg` | none | The latest camera frame during a scan, or 404. The `X-Scan` header holds the scan progress as JSON: `{"shots": 2, "want": 3, "live": false, "face": true, "good": true}` |
+
+🔒 Once a door PIN is set, these endpoints return 401 unless the request carries the `session` cookie from `/login`.
 
 Only one scan runs at a time because there is one camera. Each call blocks until its scan finishes (up to 10 s for `/recognize` and 30 s for `/enroll`).
 

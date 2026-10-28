@@ -40,11 +40,20 @@
   svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
   header {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
     padding: 16px 24px; border-bottom: 1px solid var(--line);
   }
-  h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
-  h1 svg { color: var(--ok); }
+  nav .pin-link { width: auto; padding: 7px 14px; margin-right: 12px; font-size: 14px; text-decoration: none; }
+  nav .pin-link svg { width: 16px; height: 16px; }
+  .lock-btn {
+    display: flex; align-items: center; gap: 6px; font: 500 14px var(--sans); color: var(--muted);
+    background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: color .2s, border-color .2s;
+  }
+  .lock-btn:hover { color: var(--text); border-color: #33434d; }
+  .lock-btn svg { width: 16px; height: 16px; }
+  .home-link { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; color: var(--ok); transition: background .2s; }
+  .home-link:hover, .home-link[aria-current="page"] { background: var(--panel-2); }
+  .home-link svg { width: 22px; height: 22px; }
   .pill {
     display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 99px;
     border: 1px solid var(--line); color: var(--muted); font-size: 13px;
@@ -58,6 +67,7 @@
     display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px;
     max-width: 1200px; margin: 0 auto; padding: 24px;
   }
+  main:has(> aside[hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 800px; }
 
   /* Camera stage */
   .stage {
@@ -80,6 +90,14 @@
             mask: linear-gradient(#000 0 0) top left / 28px 28px no-repeat, linear-gradient(#000 0 0) top right / 28px 28px no-repeat,
                   linear-gradient(#000 0 0) bottom left / 28px 28px no-repeat, linear-gradient(#000 0 0) bottom right / 28px 28px no-repeat;
   }
+  .hint {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+    display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-radius: 99px;
+    background: #0b0f12d9; border: 1px solid var(--line); backdrop-filter: blur(8px);
+    font-size: 16px; font-weight: 500; color: var(--text);
+  }
+  .hint[hidden] { display: none; }
+  .hint b { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; color: var(--warn); white-space: nowrap; }
   .stage[data-state="scanning"] .corners { opacity: 1; inset: 10%; animation: breathe 1.6s ease-in-out infinite; }
   .stage[data-state="scanning"] .corners::before { border-color: var(--warn); }
 
@@ -113,11 +131,47 @@
 
   nav { display: flex; align-items: center; gap: 4px; }
   nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 6px; transition: background .2s, color .2s; }
-  nav a:hover { color: var(--text); }
+  nav a:not(.primary):hover { color: var(--text); }
   nav a[aria-current="page"] { background: var(--panel-2); color: var(--text); }
   nav .pill { margin-left: 12px; }
   .tab { padding: 16px; display: grid; gap: 14px; }
-  [data-page][hidden], label[hidden] { display: none; }
+  [data-page][hidden], label[hidden], .idle[hidden] { display: none; }
+
+  .home {
+    min-height: calc(100vh - 70px); display: grid; place-content: center; justify-items: center;
+    gap: 16px; padding: 24px 16px; text-align: center;
+  }
+  .home > svg { width: 48px; height: 48px; stroke-width: 1.5; color: var(--ok); }
+  .home h2 { font-size: 32px; font-weight: 700; letter-spacing: -.02em; color: var(--text); padding: 0; }
+  .home p { margin: 0 0 8px; color: var(--muted); max-width: 44ch; text-wrap: balance; }
+  .home .primary { width: min(320px, 100%); padding: 16px; font-size: 17px; text-decoration: none; }
+  .home .secondary { color: var(--muted); font-size: 14px; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+  .home .secondary:hover { color: var(--text); }
+
+  .passcode { min-height: calc(100vh - 70px); display: grid; place-content: center; justify-items: center; gap: 20px; padding: 24px 16px; }
+  .passcode h2 { font-size: 22px; font-weight: 600; color: var(--text); padding: 0; }
+  .dots { display: flex; gap: 18px; height: 14px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--text); transition: background .12s; }
+  .dots i.on { background: var(--text); }
+  .dots[data-state="busy"] i { border-color: var(--warn); background: var(--warn); }
+  .dots[data-state="ok"] i { border-color: var(--ok); background: var(--ok); }
+  .dots.bad { animation: shake .4s; }
+  .dots.bad i { border-color: var(--bad); }
+  .pc-msg { margin: 0; min-height: 1.5em; color: var(--muted); font-size: 14px; text-align: center; }
+  .keypad { display: grid; grid-template-columns: repeat(3, 76px); gap: 18px 26px; margin-top: 8px; }
+  .keypad button {
+    width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--text); font: 400 30px var(--sans); cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, transform .1s var(--ease);
+  }
+  .keypad button:hover { background: #222c33; }
+  .keypad button:active { background: #33434d; transform: scale(.94); }
+  .keypad [data-key="del"], .keypad [data-key="ok"] { background: none; border-color: transparent; }
+  .keypad [data-key="ok"] { color: var(--ok); }
+  .keypad button svg { width: 28px; height: 28px; }
+  .passcode .secondary { color: var(--muted); text-decoration: none; padding: 8px 14px; border-radius: 6px; margin-top: 8px; }
+  .passcode .secondary:hover { color: var(--text); }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
   .tab p { margin: 0; color: var(--muted); font-size: 15px; }
   label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
   input {
@@ -165,18 +219,44 @@
 </head>
 <body>
 <header>
-  <h1>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-    Door access console
-  </h1>
+  <a class="home-link" href="/" id="nav-home" aria-label="Home" title="Home">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v11h5v-6h4v6h5V9"/></svg>
+  </a>
   <nav>
-    <a href="/" id="nav-door">Door</a>
+    <a class="primary pin-link" href="/passcode" data-page="door home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/></svg>
+      Enter passcode
+    </a>
+    <a href="/door?start" id="nav-door">Door</a>
     <a href="/register" id="nav-register">Registration</a>
+    <button class="lock-btn" id="lock" data-page="register" title="Lock Registration">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Lock
+    </button>
     <span class="pill" id="conn" data-state="online" role="status"><i></i><span>Ready</span></span>
   </nav>
 </header>
 
-<main>
+<div class="home" id="home" data-page="home">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+  <h2>Door access</h2>
+  <p>Unlock the door with your face, or with the door PIN.</p>
+  <a class="primary" href="/door?start">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M8 17a4.5 4.5 0 0 1 8 0"/></svg>
+    Start door unlock
+  </a>
+  <a class="secondary" href="/register">Register a person</a>
+</div>
+
+<div class="passcode" data-page="passcode">
+  <h2 id="pc-title">Enter door passcode</h2>
+  <div class="dots" id="pc-dots" aria-hidden="true"></div>
+  <p class="pc-msg" id="pc-msg" role="status" aria-live="polite"></p>
+  <div class="keypad" id="keypad"></div>
+  <a class="secondary" href="/">Cancel</a>
+</div>
+
+<main data-page="door register">
   <div>
     <div class="stage" id="stage" data-state="idle">
       <img id="preview" hidden alt="Live camera view during the scan" onload="this.hidden = false">
@@ -185,6 +265,7 @@
         <p>The camera turns on when you start a door check or enroll someone.</p>
       </div>
       <div class="corners" aria-hidden="true"></div>
+      <div class="hint" id="hint" hidden aria-live="polite"><span id="hint-text"></span><b id="hint-count"></b></div>
     </div>
 
     <div class="status" id="status" aria-live="polite">
@@ -194,40 +275,14 @@
     </div>
   </div>
 
-  <aside>
-    <section data-page="door">
-      <h2>Door check</h2>
-      <div class="tab">
-        <p>Face the camera, then turn your head slowly left and right until the scan finishes.</p>
-        <button class="primary" id="recognize">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M8 17a4.5 4.5 0 0 1 8 0"/></svg>
-          Start door check
-        </button>
-      </div>
-    </section>
-
+  <aside data-page="register">
     <section data-page="register">
       <h2>Enroll a person</h2>
       <form class="tab" id="panel-enroll" novalidate>
         <label>Name <input id="name" autocomplete="off" placeholder="e.g. Alice Tan" required></label>
-        <label>Role <input id="role" list="roles" value="user"></label>
-        <datalist id="roles"><option value="user"><option value="admin"><option value="guest"></datalist>
-        <p>The camera takes 8 shots. Move your head a little and change your expression between shots.</p>
         <button class="primary" id="enroll">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg>
           Enroll person
-        </button>
-      </form>
-    </section>
-
-    <section data-page="door">
-      <h2>Door PIN</h2>
-      <form class="tab" id="panel-pin" novalidate>
-        <p>Use the door PIN if the face check doesn't work.</p>
-        <label>PIN <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter PIN" required></label>
-        <button class="primary" id="unlock">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
-          Unlock with PIN
         </button>
       </form>
     </section>
@@ -285,7 +340,7 @@ function setStatus(tone, icon, title, text, score) {
 }
 
 function setBusy(busy, label) {
-  $("recognize").disabled = $("enroll").disabled = $("unlock").disabled = busy;
+  $("enroll").disabled = busy;
   $("conn").dataset.state = busy ? "busy" : "online";
   $("conn").lastChild.textContent = busy ? label : "Ready";
 }
@@ -296,10 +351,16 @@ async function run(url, body, label) {
   $("preview").hidden = true;
   $("idle").hidden = false;
   setStatus("busy", "busy", label + "…", url === "/enroll" ? "Hold still. Small changes in angle between shots help." : "Turn your head slowly left, then right.");
-  const timer = setInterval(() => {
-    const img = new Image();
-    img.onload = () => { $("preview").src = img.src; $("idle").hidden = true; };
-    img.src = "/preview.jpg?" + Date.now();
+  const timer = setInterval(async () => {
+    const r = await fetch("/preview.jpg").catch(() => null);
+    if (!r?.ok) return;
+    const info = JSON.parse(r.headers.get("X-Scan") || "{}");
+    URL.revokeObjectURL($("preview").src);
+    $("preview").src = URL.createObjectURL(await r.blob());
+    $("idle").hidden = true;
+    $("hint").hidden = false;
+    $("hint-text").textContent = hintFor(info, url === "/enroll");
+    $("hint-count").textContent = `${info.shots} of ${info.want}`;
   }, 150);
   try {
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
@@ -318,13 +379,21 @@ async function run(url, body, label) {
   } catch {
     setStatus("bad", "denied", "Can't reach the server", "Check that uvicorn is still running, then try again.");
     setBusy(false); $("conn").dataset.state = "offline"; $("conn").lastChild.textContent = "Offline";
-    clearInterval(timer); $("stage").dataset.state = "done";
+    clearInterval(timer); $("hint").hidden = true; $("stage").dataset.state = "done";
     return;
   }
   clearInterval(timer);
+  $("hint").hidden = true;
   $("stage").dataset.state = "done";
   setBusy(false);
   loadLogs();
+}
+
+function hintFor(info, enrolling) {
+  if (!info.face) return "Move into the frame and face the camera";
+  if (!info.good) return "Move closer, or find better light";
+  if (enrolling) return "Hold still, then move your head a little between shots";
+  return info.live ? "Hold still" : "Turn your head slowly left, then right";
 }
 
 function when(ts) {
@@ -335,6 +404,7 @@ function when(ts) {
 }
 
 async function loadLogs() {
+  if (PAGE !== "register") return;  // the log needs a Registration session
   try {
     const rows = await (await fetch("/logs")).json();
     $("logs").hidden = !rows.length;
@@ -357,49 +427,74 @@ async function loadLogs() {
   } catch { /* the status banner already reports a dead server */ }
 }
 
-// "/" is the door page, "/register" the registration page; both serve this file.
-const PAGE = location.pathname.startsWith("/register") ? "register" : "door";
-document.querySelectorAll("[data-page]").forEach(el => el.hidden = el.dataset.page !== PAGE);
-$("nav-" + PAGE).setAttribute("aria-current", "page");
+// "/" is home, "/door" the door page, "/register" the registration page; all serve this file.
+const PAGE = ["register", "door", "passcode"].find(p => location.pathname.startsWith("/" + p)) ?? "home";
+document.querySelectorAll("[data-page]").forEach(el => el.hidden = !el.dataset.page.split(" ").includes(PAGE));
+$("nav-" + PAGE)?.setAttribute("aria-current", "page");
 if (PAGE === "register") document.title = "Registration · Door Access Console";
-const READY_TEXT = PAGE === "register" ? "Type a name, then enroll the person at the camera." : "Start a door check to identify the person at the camera.";
+const READY_TEXT = PAGE === "register" ? "Type a name, then enroll the person at the camera." : "Open this page from Start door unlock to scan your face, or enter the door passcode.";
 
-$("recognize").onclick = () => run("/recognize", null, "Checking face");
 $("panel-enroll").onsubmit = e => {
   e.preventDefault();
   const name = $("name").value.trim();
   $("name").setAttribute("aria-invalid", !name);
   if (!name) { $("name").focus(); setStatus("warn", "warn", "Name required", "Type the person's name before enrolling."); return; }
-  run("/enroll", { name, role: $("role").value.trim() || "user" }, "Enrolling");
+  run("/enroll", { name }, "Enrolling");
 };
 $("name").oninput = () => $("name").removeAttribute("aria-invalid");
 
-$("panel-pin").onsubmit = async e => {
-  e.preventDefault();
-  const pin = $("pin").value;
-  $("pin").setAttribute("aria-invalid", !pin);
-  if (!pin) { $("pin").focus(); setStatus("warn", "warn", "PIN required", "Type the door PIN, then unlock."); return; }
-  setBusy(true, "Checking PIN");
-  try {
-    const r = await fetch("/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const msg = typeof data.detail === "string" ? data.detail : "The server returned an error.";
-      setStatus("warn", "warn", "PIN not checked", msg[0].toUpperCase() + msg.slice(1) + ".");
-    } else if (data.result === "granted") {
-      setStatus("ok", "granted", "Access granted", "The PIN is correct. The backend may open the door.");
-    } else {
-      setStatus("bad", "denied", "Access denied", "Wrong PIN. Check it and try again.");
+// Passcode keypad: any length from 4 to 12 digits, so the dots grow as you type instead of giving the length away.
+if (PAGE === "passcode") {
+  let code = "", busy = false;
+  const FOR_REG = new URLSearchParams(location.search).get("for") === "register";  // unlock Registration, not the door
+  if (FOR_REG) $("pc-title").textContent = "Enter passcode to open Registration";
+  const dots = $("pc-dots"), msg = $("pc-msg");
+  const draw = () => dots.replaceChildren(...Array.from({ length: Math.max(code.length, 4) },
+    (_, i) => Object.assign(document.createElement("i"), { className: i < code.length ? "on" : "" })));
+  const fail = text => { msg.textContent = text; dots.classList.remove("bad"); void dots.offsetWidth; dots.classList.add("bad"); };
+  async function submit() {
+    if (code.length < 4) return fail("The passcode has 4 to 12 digits.");
+    busy = true; dots.dataset.state = "busy";
+    try {
+      const r = await fetch(FOR_REG ? "/login" : "/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: code }) });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && FOR_REG) return location.assign("/register");
+      if (r.ok && data.result === "granted") {
+        dots.dataset.state = "ok"; $("pc-title").textContent = "Door unlocked"; msg.textContent = "Going back home…";
+        setTimeout(() => location.assign("/"), 2000);
+        return;
+      }
+      const d = typeof data.detail === "string" ? data.detail : "";
+      fail(r.ok ? "Wrong passcode. Try again." : d ? d[0].toUpperCase() + d.slice(1) + "." : "The server returned an error.");
+    } catch {
+      fail("Can't reach the server. Check that uvicorn is still running.");
     }
-    setBusy(false);
-  } catch {
-    setStatus("bad", "denied", "Can't reach the server", "Check that uvicorn is still running, then try again.");
-    setBusy(false); $("conn").dataset.state = "offline"; $("conn").lastChild.textContent = "Offline";
+    code = ""; busy = false; delete dots.dataset.state; draw();
   }
-  $("pin").value = "";
-  loadLogs();
-};
-$("pin").oninput = () => $("pin").removeAttribute("aria-invalid");
+  function press(k) {
+    if (busy) return;
+    if (k === "ok") return submit();
+    msg.textContent = ""; dots.classList.remove("bad");
+    code = k === "del" ? code.slice(0, -1) : code.length < 12 ? code + k : code;
+    draw();
+  }
+  for (const k of [..."123456789", "del", "0", "ok"]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.key = k;
+    b.innerHTML = k === "del" ? '<svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>'
+                : k === "ok" ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : k;
+    b.setAttribute("aria-label", k === "del" ? "Delete" : k === "ok" ? "Unlock" : k);
+    b.onclick = () => press(k);
+    $("keypad").append(b);
+  }
+  document.onkeydown = e => {
+    if (/^\d$/.test(e.key)) press(e.key);
+    else if (e.key === "Backspace") press("del");
+    else if (e.key === "Enter") press("ok");
+    else if (e.key === "Escape") location.assign("/");
+  };
+  draw();
+}
 
 function showPinState(set) {
   $("current-wrap").hidden = !set;
@@ -440,6 +535,11 @@ setStatus("idle", "ready", "Ready", READY_TEXT);
 $("status").classList.remove("show");
 loadLogs();
 if (PAGE === "register") loadPinState();
+$("lock").onclick = async () => { await fetch("/logout", { method: "POST" }).catch(() => {}); location.assign("/"); };
+if (PAGE === "door" && new URLSearchParams(location.search).has("start")) {
+  history.replaceState(null, "", "/door");  // a reload shouldn't start another scan
+  run("/recognize", null, "Checking face");
+}
 </script>
 </body>
 </html>
