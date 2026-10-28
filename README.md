@@ -34,11 +34,11 @@ On macOS, the first scan asks for camera permission for your terminal app (Termi
 .venv/bin/uvicorn api:app --port 8000
 ```
 
-Open http://localhost:8000. The page shows the camera view on the left, a result banner under it, and the actions and recent attempts on the right. The camera only turns on while a scan is running.
+Open http://localhost:8000. There are two pages, linked at the top right. **Door** (`/`) has the door check and the door PIN. **Registration** (`/register`) has enrollment and the recent attempts. Each page shows the camera view on the left and a result banner under it. The camera only turns on while a scan is running.
 
 **Enroll a person**
 
-1. Open the **Enroll** tab.
+1. Open the **Registration** page.
 2. Type a name. The role is optional and defaults to `user`.
 3. Click **Enroll person** and look at the camera.
 4. Move your head a little and change your expression while it takes 8 shots, about 0.4 s apart.
@@ -47,7 +47,7 @@ Open http://localhost:8000. The page shows the camera view on the left, a result
 
 **Door check**
 
-1. Open the **Door check** tab and click **Start door check**.
+1. Open the **Door** page and click **Start door check**.
 2. Face the camera and slowly turn your head left, then right.
 3. The banner shows one of these results:
 
@@ -58,7 +58,15 @@ Open http://localhost:8000. The page shows the camera view on the left, a result
 | Amber: Liveness check failed | `spoof_suspected` | A face was seen but the head never turned enough. It could be a photo, or you didn't turn your head. |
 | Amber: No face found | `no_face` | No usable face was seen within 10 s. |
 
-Every attempt appears under **Recent attempts**, with times in your local time zone.
+**Door PIN**
+
+If the face check fails, type the door PIN in the **Door PIN** panel on the Door page and click **Unlock with PIN**.
+
+To set the PIN the first time, open the **Registration** page. In the **Door PIN** panel, type a new PIN of 4 to 12 digits twice and click **Set PIN**. To change it later, use the same panel: it then asks for the current PIN as well, and the button reads **Change PIN**.
+
+Until a PIN is set, PIN unlock shows "PIN not checked". After 5 wrong PINs in a row, PIN checks are blocked for 30 s. This counts wrong current PINs on the change form too. The PIN is stored as a salted PBKDF2 hash in the `settings` table, never as plain text.
+
+Every attempt appears under **Recent attempts** on the Registration page, with times in your local time zone.
 
 The page loads its fonts from Google Fonts. Without internet access it falls back to system fonts and still works.
 
@@ -80,7 +88,10 @@ The server listens on the port you gave to uvicorn. Interactive docs are at http
 |---|---|---|---|
 | POST | `/enroll` | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if not enough good shots were captured |
 | POST | `/recognize` | none | `{"result": "granted", "user_id": 1, "name": "Alice", "score": 0.62}` |
-| GET | `/logs` | none | The last 20 attempts |
+| POST | `/unlock` | `{"pin": "4821"}` | `{"result": "granted"}` or `{"result": "denied"}`; 429 after 5 wrong PINs, 503 if no PIN is set |
+| GET | `/pin` | none | `{"set": true}` if a door PIN is set |
+| POST | `/pin` | `{"current": "4821", "new": "5930"}` | `{"set": true}`; `current` is needed only when a PIN is already set; 403 if it is wrong, 422 if `new` is not 4 to 12 digits |
+| GET | `/logs` | none | The last 20 attempts, each with `method` (`face` or `password`) |
 | GET | `/preview.jpg` | none | The latest camera frame during a scan, or 404 |
 
 Only one scan runs at a time because there is one camera. Each call blocks until its scan finishes (up to 10 s for `/recognize` and 30 s for `/enroll`).
@@ -104,6 +115,7 @@ The database is `door.db` (SQLite). It is created automatically in the directory
 | `users` | id, name, role, is_active, created_at |
 | `face_embeddings` | id, user_id, embedding (512 float32 values as a BLOB), model_name, created_at |
 | `access_logs` | id, user_id, method, result, score, timestamp |
+| `settings` | key, value (holds `door_pin`, the hashed door PIN) |
 
 To disable a person without deleting them, run:
 
@@ -144,6 +156,7 @@ They check matching, the database and real embeddings on a sample photo that com
 
 ## Troubleshooting
 
+- **The scan uses your iPhone instead of the Mac camera:** Continuity Camera puts the iPhone at camera 0. Start the server with `CAMERA_INDEX=1 .venv/bin/uvicorn api:app --port 8000`. When the iPhone isn't connected, camera 1 doesn't exist and it falls back to camera 0, the Mac camera.
 - **`cannot open camera`:** another app is using the camera, or the terminal doesn't have camera permission (see Setup).
 - **Always `spoof_suspected`:** turn your head more, or lower `MIN_YAW_RANGE`.
 - **Always `no_face` or red boxes:** there isn't enough light or the face is too far away. Add a lamp, move closer, or relax the quality settings.

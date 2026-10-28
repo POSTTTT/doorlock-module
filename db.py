@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS access_logs (
     score REAL,
     timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -67,3 +71,13 @@ def log_access(conn, user_id, result, score, method="face"):
             "INSERT INTO access_logs (user_id, method, result, score) VALUES (?, ?, ?, ?)",
             (user_id, method, result, score),
         )
+
+
+def get_setting(conn, key):
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row and row[0]
+
+
+def set_setting(conn, key, value):
+    with conn:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))

@@ -111,14 +111,13 @@
   section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
   h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); padding: 14px 16px 0; }
 
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 16px 0; padding: 4px; background: var(--bg); border-radius: 8px; }
-  .tabs button {
-    font: 500 15px var(--sans); color: var(--muted); background: none; border: 0; padding: 8px; border-radius: 6px; cursor: pointer;
-    transition: background .2s, color .2s;
-  }
-  .tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--text); box-shadow: 0 1px 2px #0006; }
+  nav { display: flex; align-items: center; gap: 4px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 6px; transition: background .2s, color .2s; }
+  nav a:hover { color: var(--text); }
+  nav a[aria-current="page"] { background: var(--panel-2); color: var(--text); }
+  nav .pill { margin-left: 12px; }
   .tab { padding: 16px; display: grid; gap: 14px; }
-  .tab[hidden] { display: none; }
+  [data-page][hidden], label[hidden] { display: none; }
   .tab p { margin: 0; color: var(--muted); font-size: 15px; }
   label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
   input {
@@ -170,7 +169,11 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
     Door access console
   </h1>
-  <span class="pill" id="conn" data-state="online" role="status"><i></i><span>Ready</span></span>
+  <nav>
+    <a href="/" id="nav-door">Door</a>
+    <a href="/register" id="nav-register">Registration</a>
+    <span class="pill" id="conn" data-state="online" role="status"><i></i><span>Ready</span></span>
+  </nav>
 </header>
 
 <main>
@@ -192,19 +195,20 @@
   </div>
 
   <aside>
-    <section>
-      <div class="tabs" role="tablist" aria-label="Action">
-        <button role="tab" id="tab-door" aria-selected="true" aria-controls="panel-door">Door check</button>
-        <button role="tab" id="tab-enroll" aria-selected="false" aria-controls="panel-enroll" tabindex="-1">Enroll</button>
-      </div>
-      <div class="tab" id="panel-door" role="tabpanel" aria-labelledby="tab-door">
+    <section data-page="door">
+      <h2>Door check</h2>
+      <div class="tab">
         <p>Face the camera, then turn your head slowly left and right until the scan finishes.</p>
         <button class="primary" id="recognize">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M8 17a4.5 4.5 0 0 1 8 0"/></svg>
           Start door check
         </button>
       </div>
-      <form class="tab" id="panel-enroll" role="tabpanel" aria-labelledby="tab-enroll" hidden novalidate>
+    </section>
+
+    <section data-page="register">
+      <h2>Enroll a person</h2>
+      <form class="tab" id="panel-enroll" novalidate>
         <label>Name <input id="name" autocomplete="off" placeholder="e.g. Alice Tan" required></label>
         <label>Role <input id="role" list="roles" value="user"></label>
         <datalist id="roles"><option value="user"><option value="admin"><option value="guest"></datalist>
@@ -216,7 +220,33 @@
       </form>
     </section>
 
-    <section>
+    <section data-page="door">
+      <h2>Door PIN</h2>
+      <form class="tab" id="panel-pin" novalidate>
+        <p>Use the door PIN if the face check doesn't work.</p>
+        <label>PIN <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter PIN" required></label>
+        <button class="primary" id="unlock">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+          Unlock with PIN
+        </button>
+      </form>
+    </section>
+
+    <section data-page="register">
+      <h2>Door PIN</h2>
+      <form class="tab" id="panel-setpin" novalidate>
+        <p id="setpin-hint">No door PIN is set yet. Set one so people can unlock the door without a face check.</p>
+        <label id="current-wrap" hidden>Current PIN <input id="pin-current" type="password" inputmode="numeric" autocomplete="current-password"></label>
+        <label>New PIN <input id="pin-new" type="password" inputmode="numeric" autocomplete="new-password" placeholder="4 to 12 digits"></label>
+        <label>Confirm new PIN <input id="pin-confirm" type="password" inputmode="numeric" autocomplete="new-password"></label>
+        <button class="primary" id="setpin">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M18 5l2 2"/></svg>
+          <span id="setpin-label">Set PIN</span>
+        </button>
+      </form>
+    </section>
+
+    <section data-page="register">
       <h2>Recent attempts</h2>
       <ol class="log" id="logs" hidden></ol>
       <p class="empty" id="logs-empty">No attempts yet. Door checks appear here with their score.</p>
@@ -240,7 +270,7 @@ const RESULTS = {
   spoof_suspected: { tone: "warn", icon: "warn", title: () => "Liveness check failed", text: () => "The head didn't turn enough. It may be a photo. Try again and turn your head left and right." },
   no_face: { tone: "warn", icon: "warn", title: () => "No face found", text: () => "Move closer to the camera, or add more light, and try again." },
 };
-const LOG_LABEL = { granted: "Granted", unknown: "Unknown face", spoof_suspected: "Liveness failed", no_face: "No face" };
+const LOG_LABEL = { granted: "Granted", unknown: "Unknown face", spoof_suspected: "Liveness failed", no_face: "No face", denied: "Wrong PIN" };
 
 function setStatus(tone, icon, title, text, score) {
   const s = $("status");
@@ -255,7 +285,7 @@ function setStatus(tone, icon, title, text, score) {
 }
 
 function setBusy(busy, label) {
-  $("recognize").disabled = $("enroll").disabled = busy;
+  $("recognize").disabled = $("enroll").disabled = $("unlock").disabled = busy;
   $("conn").dataset.state = busy ? "busy" : "online";
   $("conn").lastChild.textContent = busy ? label : "Ready";
 }
@@ -312,11 +342,12 @@ async function loadLogs() {
     $("logs").replaceChildren(...rows.map(r => {
       const li = document.createElement("li");
       const dot = document.createElement("span");
-      dot.className = "dot " + (r.result === "granted" ? "ok" : r.result === "unknown" ? "" : "warn");
+      dot.className = "dot " + (r.result === "granted" ? "ok" : r.result === "unknown" || r.result === "denied" ? "" : "warn");
       const who = document.createElement("div");
-      const b = document.createElement("b"); b.textContent = r.name ?? LOG_LABEL[r.result] ?? r.result;
+      const b = document.createElement("b");
+      b.textContent = r.method === "password" ? "Door PIN" : r.name ?? LOG_LABEL[r.result] ?? r.result;
       const small = document.createElement("small");
-      small.textContent = r.name ? LOG_LABEL[r.result] : r.score ? `score ${r.score.toFixed(3)}` : "No score";
+      small.textContent = r.method === "password" ? LOG_LABEL[r.result] : r.name ? LOG_LABEL[r.result] : r.score ? `score ${r.score.toFixed(3)}` : "No score";
       if (r.name && r.score) small.textContent += ` · ${r.score.toFixed(3)}`;
       who.append(b, small);
       const t = document.createElement("time"); t.dateTime = r.timestamp + "Z"; t.textContent = when(r.timestamp);
@@ -326,20 +357,12 @@ async function loadLogs() {
   } catch { /* the status banner already reports a dead server */ }
 }
 
-// Tabs: click and arrow keys.
-const tabs = [$("tab-door"), $("tab-enroll")];
-function selectTab(tab) {
-  for (const t of tabs) {
-    const on = t === tab;
-    t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1;
-    $(t.getAttribute("aria-controls")).hidden = !on;
-  }
-  tab.focus();
-}
-tabs.forEach(t => {
-  t.onclick = () => selectTab(t);
-  t.onkeydown = e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") selectTab(tabs[1 - tabs.indexOf(t)]); };
-});
+// "/" is the door page, "/register" the registration page; both serve this file.
+const PAGE = location.pathname.startsWith("/register") ? "register" : "door";
+document.querySelectorAll("[data-page]").forEach(el => el.hidden = el.dataset.page !== PAGE);
+$("nav-" + PAGE).setAttribute("aria-current", "page");
+if (PAGE === "register") document.title = "Registration · Door Access Console";
+const READY_TEXT = PAGE === "register" ? "Type a name, then enroll the person at the camera." : "Start a door check to identify the person at the camera.";
 
 $("recognize").onclick = () => run("/recognize", null, "Checking face");
 $("panel-enroll").onsubmit = e => {
@@ -351,9 +374,72 @@ $("panel-enroll").onsubmit = e => {
 };
 $("name").oninput = () => $("name").removeAttribute("aria-invalid");
 
-setStatus("idle", "ready", "Ready", "Start a door check to identify the person at the camera.");
+$("panel-pin").onsubmit = async e => {
+  e.preventDefault();
+  const pin = $("pin").value;
+  $("pin").setAttribute("aria-invalid", !pin);
+  if (!pin) { $("pin").focus(); setStatus("warn", "warn", "PIN required", "Type the door PIN, then unlock."); return; }
+  setBusy(true, "Checking PIN");
+  try {
+    const r = await fetch("/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const msg = typeof data.detail === "string" ? data.detail : "The server returned an error.";
+      setStatus("warn", "warn", "PIN not checked", msg[0].toUpperCase() + msg.slice(1) + ".");
+    } else if (data.result === "granted") {
+      setStatus("ok", "granted", "Access granted", "The PIN is correct. The backend may open the door.");
+    } else {
+      setStatus("bad", "denied", "Access denied", "Wrong PIN. Check it and try again.");
+    }
+    setBusy(false);
+  } catch {
+    setStatus("bad", "denied", "Can't reach the server", "Check that uvicorn is still running, then try again.");
+    setBusy(false); $("conn").dataset.state = "offline"; $("conn").lastChild.textContent = "Offline";
+  }
+  $("pin").value = "";
+  loadLogs();
+};
+$("pin").oninput = () => $("pin").removeAttribute("aria-invalid");
+
+function showPinState(set) {
+  $("current-wrap").hidden = !set;
+  $("setpin-label").textContent = set ? "Change PIN" : "Set PIN";
+  $("setpin-hint").textContent = set ? "Type the current PIN, then the new one twice."
+                                     : "No door PIN is set yet. Set one so people can unlock the door without a face check.";
+}
+async function loadPinState() {
+  try { showPinState((await (await fetch("/pin")).json()).set); } catch { /* the status banner reports a dead server */ }
+}
+
+$("panel-setpin").onsubmit = async e => {
+  e.preventDefault();
+  const current = $("pin-current").value, pin = $("pin-new").value, changing = !$("current-wrap").hidden;
+  const bad = (el, title, text) => { el.setAttribute("aria-invalid", true); el.focus(); setStatus("warn", "warn", title, text); };
+  if (changing && !current) return bad($("pin-current"), "Current PIN required", "Type the current PIN to change it.");
+  if (!/^\d{4,12}$/.test(pin)) return bad($("pin-new"), "PIN not valid", "Use 4 to 12 digits.");
+  if (pin !== $("pin-confirm").value) return bad($("pin-confirm"), "PINs don't match", "Type the same new PIN in both boxes.");
+  $("setpin").disabled = true;
+  try {
+    const r = await fetch("/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ current, new: pin }) });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      setStatus("ok", "enrolled", changing ? "PIN changed" : "PIN set", "Use the new PIN on the Door page.");
+      $("panel-setpin").reset(); showPinState(true);
+    } else {
+      const msg = typeof data.detail === "string" ? data.detail : "The server returned an error.";
+      setStatus("warn", "warn", "PIN not saved", msg[0].toUpperCase() + msg.slice(1) + ".");
+    }
+  } catch {
+    setStatus("bad", "denied", "Can't reach the server", "Check that uvicorn is still running, then try again.");
+  }
+  $("setpin").disabled = false;
+};
+for (const id of ["pin-current", "pin-new", "pin-confirm"]) $(id).oninput = () => $(id).removeAttribute("aria-invalid");
+
+setStatus("idle", "ready", "Ready", READY_TEXT);
 $("status").classList.remove("show");
 loadLogs();
+if (PAGE === "register") loadPinState();
 </script>
 </body>
 </html>

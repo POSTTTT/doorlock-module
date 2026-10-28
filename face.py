@@ -5,6 +5,7 @@ CLI:
     python face.py recognize
     python face.py compare a.jpg b.jpg     # cosine score between two photos, for threshold tuning
 """
+import os
 import sys
 import time
 
@@ -21,6 +22,8 @@ MIN_SHARPNESS = 60.0  # variance of Laplacian on the face crop
 BRIGHTNESS = (50, 210)  # mean gray level of the face crop
 MIN_YAW_RANGE = 0.30  # liveness: how far the head must turn left<->right
 FRAME_SKIP = 2  # process every Nth frame to stay fast on CPU
+# An iPhone with Continuity Camera takes index 0 and moves the Mac camera to 1; set CAMERA_INDEX=1 then.
+CAMERA_INDEX = int(os.environ.get("CAMERA_INDEX", 0))
 
 
 def load_model():
@@ -29,8 +32,10 @@ def load_model():
     return app
 
 
-def open_camera(index=0):
+def open_camera(index=CAMERA_INDEX):
     cam = cv2.VideoCapture(index)
+    if not cam.isOpened() and index != 0:
+        cam = cv2.VideoCapture(0)  # the iPhone isn't connected, so the Mac camera is back at 0
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     if not cam.isOpened():

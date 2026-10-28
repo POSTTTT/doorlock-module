@@ -28,6 +28,11 @@ def test_match_and_db():
     db.log_access(conn, ids[0], "granted", score)
     assert conn.execute("SELECT method, result FROM access_logs").fetchone() == ("face", "granted")
 
+    assert db.get_setting(conn, "door_pin") is None
+    db.set_setting(conn, "door_pin", "a")
+    db.set_setting(conn, "door_pin", "b")
+    assert db.get_setting(conn, "door_pin") == "b"
+
 
 def test_real_embeddings():
     from insightface.data import get_image
