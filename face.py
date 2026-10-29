@@ -76,9 +76,10 @@ def pitch(face):
 
 
 def pose_of(d_yaw, d_pitch):
-    """Which POSES entry a head at this yaw/pitch change from straight-on is in, by image direction; None in between."""
+    """Which POSES entry a head at this yaw/pitch change from straight-on is in; None in between.
+    Left and right are as seen in the mirrored preview, so the nose moving right in the camera image is "left"."""
     if abs(d_yaw) >= TURN and abs(d_yaw) >= abs(d_pitch):
-        return "right" if d_yaw > 0 else "left"
+        return "left" if d_yaw > 0 else "right"
     if abs(d_pitch) >= TILT:
         return "down" if d_pitch > 0 else "up"
     if abs(d_yaw) < TURN / 2 and abs(d_pitch) < TILT / 2:
@@ -210,6 +211,7 @@ class FaceModule:
 def window(frame, info):
     todo = "move head in a circle" if "poses" in info else "live" if info["live"] else "turn head left and right"
     msg = f"{info['shots']}/{info['want']} {todo}"
+    frame = cv2.flip(frame, 1)  # mirrored, like a selfie camera; flipped before the text so it reads
     cv2.putText(frame, msg, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     cv2.imshow("face", frame)
     cv2.waitKey(1)

@@ -144,6 +144,7 @@ def fresh_show():
 
 
 def show(frame, info):
+    frame = cv2.flip(frame, 1)  # mirrored, like a selfie camera; scanning itself uses the unflipped frame
     latest["jpg"], latest["info"] = cv2.imencode(".jpg", frame)[1].tobytes(), info
 
 

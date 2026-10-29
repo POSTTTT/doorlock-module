@@ -36,7 +36,7 @@ def test_match_and_db():
 
 def test_enrollment_poses():
     assert pose_of(0, 0) == "center"
-    assert pose_of(0.3, 0) == "right" and pose_of(-0.3, 0.05) == "left"
+    assert pose_of(0.3, 0) == "left" and pose_of(-0.3, 0.05) == "right"  # named as seen in the mirrored preview
     assert pose_of(0, 0.2) == "down" and pose_of(0.05, -0.2) == "up"
     assert pose_of(0.12, 0) is None  # between straight-on and turned
 
