@@ -121,8 +121,8 @@ class FaceModule:
     def reload(self):
         self.ids, self.names, self.matrix = db.load_embeddings(self.conn, MODEL)
 
-    def enroll(self, name, role="user", shots=8, show=None):
-        cam = open_camera()
+    def enroll(self, name, role="user", shots=8, show=None, cam=None):
+        cam = cam or open_camera()
         try:
             embs, _ = scan(self.app, cam, shots, need_liveness=False, timeout=30, show=show, space=0.4)
         finally:
@@ -134,8 +134,8 @@ class FaceModule:
         self.reload()
         return user_id
 
-    def recognize(self, show=None):
-        cam = open_camera()
+    def recognize(self, show=None, cam=None):
+        cam = cam or open_camera()
         try:
             embs, live = scan(self.app, cam, 3, need_liveness=True, show=show)
         finally:

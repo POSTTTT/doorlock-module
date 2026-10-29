@@ -3,14 +3,18 @@ import hashlib
 import hmac
 import json
 import os
+import queue
 import secrets
 import socket
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Literal
 
 import cv2
+import numpy as np
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -40,7 +44,8 @@ def network_url():
             s.connect(("8.8.8.8", 80))  # UDP connect sends nothing; it only picks the interface that faces the network
         except OSError:
             return None
-        return f"http://{s.getsockname()[0]}:{flag('--port', '8000')}"
+        scheme = "https" if "--ssl-certfile" in sys.argv else "http"
+        return f"{scheme}://{s.getsockname()[0]}:{flag('--port', '8000')}"
 
 
 if url := network_url():
@@ -90,6 +95,47 @@ def require_unlocked(request: Request):
         raise HTTPException(401, "registration is locked, enter the passcode first")
 
 
+class BrowserCamera:
+    """Frames the page posts to /frame, read like cv2.VideoCapture by face.scan."""
+
+    def __init__(self, enrolling):
+        self.enrolling = enrolling  # an enroll scan only takes frames from an unlocked session
+        self.frames = queue.Queue(maxsize=1)
+
+    def put(self, frame):
+        try:
+            self.frames.get_nowait()  # keep only the newest frame
+        except queue.Empty:
+            pass
+        try:
+            self.frames.put_nowait(frame)
+        except queue.Full:
+            pass
+
+    def read(self):
+        try:
+            return True, self.frames.get(timeout=1)
+        except queue.Empty:
+            return False, None
+
+    def release(self):
+        pass
+
+
+browser = {"cam": None}  # the BrowserCamera of the running scan, if it uses the page's camera
+
+
+@contextmanager
+def scan_camera(source, enrolling=False):
+    """Holds the camera for one scan. Yields None for the Mac camera, or the BrowserCamera that /frame feeds."""
+    with camera:
+        browser["cam"] = BrowserCamera(enrolling) if source == "browser" else None
+        try:
+            yield browser["cam"]
+        finally:
+            browser["cam"] = None
+
+
 def fresh_show():
     latest["jpg"] = None  # don't let the page show the previous scan's last frame
     return show
@@ -105,22 +151,41 @@ class Enroll(BaseModel):
 
 
 @app.post("/enroll", dependencies=[Depends(require_unlocked)])
-def enroll(body: Enroll):
-    with camera:
+def enroll(body: Enroll, source: Literal["server", "browser"] = "server"):
+    with scan_camera(source, enrolling=True) as cam:
         try:
-            return {"user_id": face.enroll(body.name, body.role, show=fresh_show())}
+            return {"user_id": face.enroll(body.name, body.role, show=fresh_show(), cam=cam)}
         except RuntimeError as e:
             raise HTTPException(422, str(e))
 
 
 @app.post("/recognize")
-def recognize():
-    """result: granted | unknown | spoof_suspected | no_face. The backend decides whether to open the door."""
-    with camera:
+def recognize(source: Literal["server", "browser"] = "server"):
+    """result: granted | unknown | spoof_suspected | no_face. The backend decides whether to open the door.
+    source=browser scans the frames the page posts to /frame instead of the Mac camera."""
+    with scan_camera(source) as cam:
         try:
-            return face.recognize(show=fresh_show())
+            return face.recognize(show=fresh_show(), cam=cam)
         except RuntimeError as e:
             raise HTTPException(503, str(e))
+
+
+@app.post("/frame")
+async def frame(request: Request):
+    """One JPEG from the page's camera, for the running source=browser scan."""
+    cam = browser["cam"]
+    if cam is None:
+        raise HTTPException(409, "no browser camera scan is running")
+    if cam.enrolling and not unlocked(request):
+        raise HTTPException(401, "registration is locked, enter the passcode first")
+    body = await request.body()
+    if len(body) > 2_000_000:
+        raise HTTPException(413, "frame is larger than 2 MB")
+    img = cv2.imdecode(np.frombuffer(body, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(400, "frame is not a JPEG image")
+    cam.put(img)
+    return {"ok": True}
 
 
 class Unlock(BaseModel):

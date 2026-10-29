@@ -34,11 +34,17 @@ On macOS, the first scan asks for camera permission for your terminal app (Termi
 # This Mac only
 .venv/bin/uvicorn api:app --port 8000
 
-# Also reachable from a phone on the same Wi‑Fi
-.venv/bin/uvicorn api:app --host 0.0.0.0 --port 8000
+# Also reachable from a phone on the same Wi‑Fi, scanning with the phone's camera
+.venv/bin/uvicorn api:app --host 0.0.0.0 --port 8000 --ssl-keyfile key.pem --ssl-certfile cert.pem
 ```
 
-The second command prints the address to open on the phone, such as `http://172.16.35.187:8000`. The scan still uses the Mac's camera. Anyone on the network can reach the page, so do this only on a network you trust.
+The second command needs a self-signed certificate, because phones only let a page use the camera over HTTPS. Create it once:
+
+```sh
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout key.pem -out cert.pem -subj "/CN=face-door"
+```
+
+The command prints the address to open on the phone, such as `https://172.16.35.187:8000`. The phone warns that the connection isn't private. Accept the warning once, then allow camera access. On the phone, scans use the phone's front camera. On the Mac, they still use the Mac's camera; open https://localhost:8000 there while the server runs with HTTPS. Anyone on the network can reach the page, so do this only on a network you trust. The certificate lasts 365 days.
 
 Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the door PIN setup and the recent attempts. Both are linked at the top right. Each of them shows the camera view on the left and a result banner under it. The camera only turns on while a scan is running.
 

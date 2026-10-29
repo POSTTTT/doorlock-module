@@ -345,7 +345,34 @@ function setBusy(busy, label) {
   $("conn").lastChild.textContent = busy ? label : "Ready";
 }
 
+// Off the Mac, scan with this device's camera: the server can only open the Mac's.
+const REMOTE = !["localhost", "127.0.0.1"].includes(location.hostname);
+
+async function sendFrames(stream) {
+  const video = Object.assign(document.createElement("video"), { srcObject: stream, muted: true, playsInline: true });
+  await video.play();
+  const canvas = document.createElement("canvas");
+  while (stream.active) {
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    const jpg = await new Promise(done => canvas.toBlob(done, "image/jpeg", 0.8));
+    const r = await fetch("/frame", { method: "POST", body: jpg }).catch(() => null);
+    if (!r?.ok) await new Promise(done => setTimeout(done, 150));  // the scan hasn't started yet, or has ended
+  }
+}
+
 async function run(url, body, label) {
+  let stream = null;
+  if (REMOTE) {
+    stream = await navigator.mediaDevices?.getUserMedia({ video: { facingMode: "user", width: 640, height: 480 }, audio: false }).catch(() => null);
+    if (!stream) {
+      setStatus("warn", "warn", "Camera not available", location.protocol === "https:"
+        ? "Allow camera access for this page in your browser settings, then try again."
+        : "Open this page with https:// to use this device's camera.");
+      return;
+    }
+    sendFrames(stream);
+  }
   setBusy(true, label);
   $("stage").dataset.state = "scanning";
   $("preview").hidden = true;
@@ -363,7 +390,7 @@ async function run(url, body, label) {
     $("hint-count").textContent = `${info.shots} of ${info.want}`;
   }, 150);
   try {
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
+    const r = await fetch(url + (REMOTE ? "?source=browser" : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = typeof data.detail === "string" ? data.detail : "The server returned an error.";
@@ -378,10 +405,12 @@ async function run(url, body, label) {
     $("conn").dataset.state = "online";
   } catch {
     setStatus("bad", "denied", "Can't reach the server", "Check that uvicorn is still running, then try again.");
+    stream?.getTracks().forEach(t => t.stop());
     setBusy(false); $("conn").dataset.state = "offline"; $("conn").lastChild.textContent = "Offline";
     clearInterval(timer); $("hint").hidden = true; $("stage").dataset.state = "done";
     return;
   }
+  stream?.getTracks().forEach(t => t.stop());
   clearInterval(timer);
   $("hint").hidden = true;
   $("stage").dataset.state = "done";
