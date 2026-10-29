@@ -104,9 +104,9 @@
   /* Status banner */
   .status {
     --tone: var(--muted);
-    display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 18px 20px;
-    border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line);
-    position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 16px; padding: 16px 18px;
+    border-radius: var(--radius); background: #0b0f12d9; border: 1px solid var(--line); backdrop-filter: blur(8px);
+    position: absolute; left: 12px; right: 12px; bottom: 12px; overflow: hidden;
   }
   .status::before {
     content: ""; position: absolute; inset: 0; background: var(--tone); opacity: .12;
@@ -212,8 +212,11 @@
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
     header { padding: 14px 16px; }
-    .status strong { font-size: 19px; }
-    .status { flex-wrap: wrap; }
+    .stage { aspect-ratio: 3 / 4; }  /* phones send portrait frames; the first frame sets the exact ratio */
+    .status { gap: 12px; padding: 12px 14px; }
+    .status svg { width: 26px; height: 26px; }
+    .status strong { font-size: 17px; }
+    .status span { font-size: 14px; }
   }
 </style>
 </head>
@@ -259,20 +262,20 @@
 <main data-page="door register">
   <div>
     <div class="stage" id="stage" data-state="idle">
-      <img id="preview" hidden alt="Live camera view during the scan" onload="this.hidden = false">
+      <img id="preview" hidden alt="Live camera view during the scan" onload="this.hidden = false; this.parentNode.style.aspectRatio = this.naturalWidth + ' / ' + this.naturalHeight">
       <div class="idle" id="idle">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
         <p>The camera turns on when you start a door check or enroll someone.</p>
       </div>
       <div class="corners" aria-hidden="true"></div>
       <div class="hint" id="hint" hidden aria-live="polite"><span id="hint-text"></span><b id="hint-count"></b></div>
+      <div class="status" id="status" aria-live="polite">
+        <svg id="status-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
+        <div><strong id="status-title">Ready</strong><span id="status-text">Start a door check to identify the person at the camera.</span></div>
+        <div class="score" id="score" hidden></div>
+      </div>
     </div>
 
-    <div class="status" id="status" aria-live="polite">
-      <svg id="status-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
-      <div><strong id="status-title">Ready</strong><span id="status-text">Start a door check to identify the person at the camera.</span></div>
-      <div class="score" id="score" hidden></div>
-    </div>
   </div>
 
   <aside data-page="register">
@@ -319,8 +322,10 @@ const ICONS = {
   busy: '<circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/><circle cx="12" cy="12" r="2"/>',
   enrolled: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
 };
+const pct = score => (score * 100).toFixed(1) + "%";  // cosine similarity 0-1 shown as a percentage
+
 const RESULTS = {
-  granted: { tone: "ok", icon: "granted", title: d => `Access granted, ${d.name}`, text: () => "Identity matched. The backend may open the door." },
+  granted: { tone: "ok", icon: "granted", title: d => `Access granted, ${d.name}`, text: () => "" },
   unknown: { tone: "bad", icon: "denied", title: () => "Access denied", text: () => "This face doesn't match anyone enrolled." },
   spoof_suspected: { tone: "warn", icon: "warn", title: () => "Liveness check failed", text: () => "The head didn't turn enough. It may be a photo. Try again and turn your head left and right." },
   no_face: { tone: "warn", icon: "warn", title: () => "No face found", text: () => "Move closer to the camera, or add more light, and try again." },
@@ -335,7 +340,7 @@ function setStatus(tone, icon, title, text, score) {
   $("status-title").textContent = title;
   $("status-text").textContent = text;
   $("score").hidden = score == null;
-  if (score != null) $("score").innerHTML = `${score.toFixed(3)}<small>match score</small>`;
+  if (score != null) $("score").innerHTML = `${pct(score)}<small>match score</small>`;
   if (tone !== "busy") s.classList.add("show");
 }
 
@@ -446,8 +451,8 @@ async function loadLogs() {
       const b = document.createElement("b");
       b.textContent = r.method === "password" ? "Door PIN" : r.name ?? LOG_LABEL[r.result] ?? r.result;
       const small = document.createElement("small");
-      small.textContent = r.method === "password" ? LOG_LABEL[r.result] : r.name ? LOG_LABEL[r.result] : r.score ? `score ${r.score.toFixed(3)}` : "No score";
-      if (r.name && r.score) small.textContent += ` · ${r.score.toFixed(3)}`;
+      small.textContent = r.method === "password" ? LOG_LABEL[r.result] : r.name ? LOG_LABEL[r.result] : r.score ? `score ${pct(r.score)}` : "No score";
+      if (r.name && r.score) small.textContent += ` · ${pct(r.score)}`;
       who.append(b, small);
       const t = document.createElement("time"); t.dateTime = r.timestamp + "Z"; t.textContent = when(r.timestamp);
       li.append(dot, who, t);
