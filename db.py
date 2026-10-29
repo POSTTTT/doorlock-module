@@ -44,6 +44,16 @@ def add_user(conn, name, role="user"):
         return conn.execute("INSERT INTO users (name, role) VALUES (?, ?)", (name, role)).lastrowid
 
 
+def remove_user(conn, user_id):
+    """Deletes the user's face data and deactivates them; the row stays so old access logs keep the name.
+    Returns False if there is no active user with that id."""
+    with conn:
+        if not conn.execute("UPDATE users SET is_active = 0 WHERE id = ? AND is_active = 1", (user_id,)).rowcount:
+            return False
+        conn.execute("DELETE FROM face_embeddings WHERE user_id = ?", (user_id,))
+    return True
+
+
 def add_embedding(conn, user_id, emb, model_name):
     with conn:
         conn.execute(

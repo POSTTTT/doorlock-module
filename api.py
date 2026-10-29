@@ -256,6 +256,22 @@ def logs():
     return [dict(zip(("timestamp", "name", "result", "score", "method"), r)) for r in rows]
 
 
+@app.get("/users", dependencies=[Depends(require_unlocked)])
+def users():
+    rows = face.conn.execute(
+        "SELECT id, name, role, created_at FROM users WHERE is_active = 1 ORDER BY id DESC"
+    ).fetchall()
+    return [dict(zip(("id", "name", "role", "created_at"), r)) for r in rows]
+
+
+@app.delete("/users/{user_id}", dependencies=[Depends(require_unlocked)])
+def remove_user(user_id: int):
+    if not db.remove_user(face.conn, user_id):
+        raise HTTPException(404, "no registered person with that number")
+    face.reload()
+    return {"removed": user_id}
+
+
 @app.get("/preview.jpg")
 def preview():
     if latest["jpg"] is None:

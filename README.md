@@ -46,7 +46,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout key.pem -out cert.pe
 
 The command prints the address to open on the phone, such as `https://172.16.35.187:8000`. The phone warns that the connection isn't private. Accept the warning once, then allow camera access. On the phone, scans use the phone's front camera. On the Mac, they still use the Mac's camera; open https://localhost:8000 there while the server runs with HTTPS. Anyone on the network can reach the page, so do this only on a network you trust. The certificate lasts 365 days.
 
-Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the door PIN setup and the recent attempts. The home page links to Registration with **Register a person**, and the home icon at the top left returns to the home page. Each page shows the camera view with the result as a banner inside it. The camera only turns on while a scan is running.
+Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the list of registered people (with a remove button for each), the door PIN setup and the recent attempts. The home page links to Registration with **Register a person**, and the home icon at the top left returns to the home page. Each page shows the camera view with the result as a banner inside it. The camera only turns on while a scan is running.
 
 **Registration lock**
 
@@ -110,6 +110,8 @@ The server listens on the port you gave to uvicorn. Interactive docs are at http
 | GET | `/pin` | none | `{"set": true, "length": 4}`; `set` is true if a door PIN is set, `length` is its digit count (`null` for an older PIN until it is entered correctly once) |
 | POST | `/pin` 🔒 | `{"current": "4821", "new": "5930"}` | `{"set": true}`; `current` is needed only when a PIN is already set; 403 if it is wrong, 422 if `new` is not 4 to 12 digits |
 | GET | `/logs` 🔒 | none | The last 20 attempts, each with `method` (`face` or `password`) |
+| GET | `/users` 🔒 | none | Registered people, newest first, each with `id`, `name`, `role` and `created_at` |
+| DELETE | `/users/{id}` 🔒 | none | `{"removed": id}`; deletes the person's face data so they can no longer be recognized, and keeps their name in old access logs; 404 if there is no such person |
 | GET | `/preview.jpg` | none | The latest camera frame during a scan, or 404. The `X-Scan` header holds the scan progress as JSON: `{"shots": 2, "want": 3, "live": false, "face": true, "good": true}` |
 
 🔒 Once a door PIN is set, these endpoints return 401 unless the request carries the `session` cookie from `/login`.
