@@ -481,7 +481,8 @@ if (PAGE === "passcode") {
   for (const k of [..."123456789", "del", "0", "ok"]) {
     const b = document.createElement("button");
     b.type = "button"; b.dataset.key = k;
-    b.innerHTML = k === "del" ? '<svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>'
+    // Delete icon's viewBox starts at x=1: its heavy body sits right of the point, so shift it left to look centred.
+    b.innerHTML = k === "del" ? '<svg viewBox="1 0 24 24"><path d="M10 5a2 2 0 0 0-1.34.52l-6.33 5.74a1 1 0 0 0 0 1.48l6.33 5.74A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="M12 9l6 6M18 9l-6 6"/></svg>'
                 : k === "ok" ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : k;
     b.setAttribute("aria-label", k === "del" ? "Delete" : k === "ok" ? "Unlock" : k);
     b.onclick = () => press(k);
