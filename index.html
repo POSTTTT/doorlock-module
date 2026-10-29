@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Door Access Console</title>
+<title>Door Lock Module</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233ecf9e' stroke-width='2' stroke-linecap='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -585,7 +585,7 @@ const PAGE = TOP === "register" && SUB ? { face: "face", fingerprint: "fingerpri
 document.querySelectorAll("[data-page]").forEach(el => el.hidden = !el.dataset.page.split(" ").includes(PAGE));
 $("nav-" + PAGE)?.setAttribute("aria-current", "page");
 const TITLES = { register: "Registration", face: "Face ID", fingerprint: "Fingerprint ID", pin: "Passcode", logs: "Logs" };
-if (TITLES[PAGE]) document.title = TITLES[PAGE] + " · Door Access Console";
+if (TITLES[PAGE]) document.title = TITLES[PAGE] + " · Door Lock Module";
 const READY_TEXT = PAGE === "face" ? "Type a name, then enroll the person at the camera." : "Open this page from Start door unlock to scan your face, or enter the door passcode.";
 
 $("panel-enroll").onsubmit = e => {

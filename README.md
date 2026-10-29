@@ -1,4 +1,4 @@
-# Face recognition module
+# Door lock module
 
 This module identifies a registered person from the laptop camera and tells the backend who they are. The backend then decides whether to open the door.
 It implements `Face Recognition Module — Implementation Plan.pdf`.

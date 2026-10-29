@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 import db
 from face import FaceModule
 
-app = FastAPI(title="Face recognition module")
+app = FastAPI(title="Door lock module")
 face = FaceModule()
 camera = threading.Lock()  # one camera, one scan at a time
 latest = {"jpg": None, "info": {}}  # last annotated frame of the running scan and its progress, for the test page
