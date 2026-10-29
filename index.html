@@ -137,6 +137,29 @@
   .home .secondary { color: var(--muted); font-size: 14px; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
   .home .secondary:hover { color: var(--text); }
 
+  /* Registration hub and its sub-pages */
+  .crumbs { display: flex; align-items: center; gap: 8px; }
+  .back-link { display: flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 10px; border-radius: 6px; }
+  .back-link:hover { color: var(--text); background: var(--panel-2); }
+  .back-link svg { width: 16px; height: 16px; }
+  .hub { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  .hub h1 { margin: 0 0 28px; font-size: 32px; font-weight: 700; letter-spacing: -.02em; }
+  .hub h2 { padding: 0; margin: 0 0 12px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card {
+    display: grid; gap: 4px; align-content: start; padding: 20px; border-radius: var(--radius);
+    background: var(--panel); border: 1px solid var(--line); color: var(--text); text-decoration: none; transition: border-color .2s, background .2s;
+  }
+  .card:hover { border-color: #33434d; background: var(--panel-2); }
+  .card svg { width: 24px; height: 24px; color: var(--ok); margin-bottom: 10px; }
+  .card strong { font-size: 18px; font-weight: 600; }
+  .card span { color: var(--muted); font-size: 14px; }
+  .card .soon { justify-self: start; }
+  .soon { margin-top: 6px; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  main:has(> div[hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  section .status { position: static; margin: 0 16px 16px; }  /* the Passcode page has no camera, so the banner sits in its panel */
+  section .status[data-tone="idle"] { display: none; }
+
   .passcode { min-height: calc(100vh - 70px); display: grid; place-content: center; justify-items: center; gap: 20px; padding: 24px 16px; }
   .passcode h2 { font-size: 22px; font-weight: 600; color: var(--text); padding: 0; }
   .dots { display: flex; gap: 18px; height: 14px; }
@@ -214,15 +237,21 @@
 </head>
 <body>
 <header>
-  <a class="home-link" href="/" id="nav-home" aria-label="Home" title="Home">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v11h5v-6h4v6h5V9"/></svg>
-  </a>
+  <div class="crumbs">
+    <a class="home-link" href="/" id="nav-home" aria-label="Home" title="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v11h5v-6h4v6h5V9"/></svg>
+    </a>
+    <a class="back-link" href="/register" data-page="face fingerprint pin logs">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      Registration
+    </a>
+  </div>
   <nav>
     <a class="primary pin-link" href="/passcode" data-page="door home">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/></svg>
       Enter passcode
     </a>
-    <button class="lock-btn" id="lock" data-page="register" title="Lock Registration">
+    <button class="lock-btn" id="lock" data-page="register face fingerprint pin logs" title="Lock Registration">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       Lock
     </button>
@@ -240,6 +269,40 @@
   <a class="secondary" href="/register">Register a person</a>
 </div>
 
+<div class="hub" data-page="register">
+  <h1>Registration</h1>
+  <h2>Ways to unlock</h2>
+  <div class="cards">
+    <a class="card" href="/register/face">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="11" r="3"/><path d="M8 17a4.5 4.5 0 0 1 8 0"/></svg>
+      <strong>Face ID</strong><span id="hub-face">Enroll and remove people</span>
+    </a>
+    <a class="card" href="/register/fingerprint">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v2a9 9 0 0 1-1.5 5M8.5 20.5A12 12 0 0 0 9 13v-2a3 3 0 0 1 6 0v1.5M15 16.5a17 17 0 0 1-.8 4M5 15.5c.6-1.4 1-2.9 1-4.5a6 6 0 0 1 10.5-4M18.5 9.5c.3.8.5 1.6.5 2.5v.5"/></svg>
+      <strong>Fingerprint ID</strong><span>Unlock with a fingerprint reader</span><span class="soon">Coming soon</span>
+    </a>
+    <a class="card" href="/register/passcode">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/></svg>
+      <strong>Passcode</strong><span id="hub-pin">Set or change the door PIN</span>
+    </a>
+  </div>
+  <h2>Activity</h2>
+  <div class="cards">
+    <a class="card" href="/register/logs">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <strong>Logs</strong><span id="hub-logs">Recent door attempts</span>
+    </a>
+  </div>
+</div>
+
+<div class="home" data-page="fingerprint">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v2a9 9 0 0 1-1.5 5M8.5 20.5A12 12 0 0 0 9 13v-2a3 3 0 0 1 6 0v1.5M15 16.5a17 17 0 0 1-.8 4M5 15.5c.6-1.4 1-2.9 1-4.5a6 6 0 0 1 10.5-4M18.5 9.5c.3.8.5 1.6.5 2.5v.5"/></svg>
+  <h2>Fingerprint ID</h2>
+  <p>Fingerprint unlock is coming. Once a reader is connected, you'll enroll fingerprints here.</p>
+  <button class="primary" disabled>Enroll fingerprint</button>
+  <span class="soon">Coming soon</span>
+</div>
+
 <div class="passcode" data-page="passcode">
   <h2 id="pc-title">Enter door passcode</h2>
   <div class="dots" id="pc-dots" aria-hidden="true"></div>
@@ -248,8 +311,8 @@
   <a class="secondary" href="/">Cancel</a>
 </div>
 
-<main data-page="door register">
-  <div>
+<main data-page="door face pin logs">
+  <div data-page="door face">
     <div class="stage" id="stage" data-state="idle">
       <img id="preview" hidden alt="Live camera view during the scan" onload="this.hidden = false; this.parentNode.style.aspectRatio = this.naturalWidth + ' / ' + this.naturalHeight">
       <div class="idle" id="idle">
@@ -267,8 +330,8 @@
 
   </div>
 
-  <aside data-page="register">
-    <section data-page="register">
+  <aside data-page="face pin logs">
+    <section data-page="face">
       <h2>Enroll a person</h2>
       <form class="tab" id="panel-enroll" novalidate>
         <label>Name <input id="name" autocomplete="off" placeholder="e.g. Alice Tan" required></label>
@@ -279,13 +342,13 @@
       </form>
     </section>
 
-    <section data-page="register">
+    <section data-page="face">
       <h2>Registered people</h2>
       <ol class="log" id="users" hidden></ol>
       <p class="empty" id="users-empty">No one is registered yet. People you enroll appear here.</p>
     </section>
 
-    <section data-page="register">
+    <section data-page="pin">
       <h2>Door PIN</h2>
       <form class="tab" id="panel-setpin" novalidate>
         <p id="setpin-hint">No door PIN is set yet. Set one so people can unlock the door without a face check.</p>
@@ -299,7 +362,7 @@
       </form>
     </section>
 
-    <section data-page="register">
+    <section data-page="logs">
       <h2>Recent attempts</h2>
       <ol class="log" id="logs" hidden></ol>
       <p class="empty" id="logs-empty">No attempts yet. Door checks appear here with their score.</p>
@@ -431,7 +494,7 @@ function when(ts) {
 }
 
 async function loadLogs() {
-  if (PAGE !== "register") return;  // the log needs a Registration session
+  if (PAGE !== "logs") return;
   try {
     const rows = await (await fetch("/logs")).json();
     $("logs").hidden = !rows.length;
@@ -455,7 +518,7 @@ async function loadLogs() {
 }
 
 async function loadUsers() {
-  if (PAGE !== "register") return;  // the list needs a Registration session
+  if (PAGE !== "face") return;
   try {
     const rows = await (await fetch("/users")).json();
     $("users").hidden = !rows.length;
@@ -475,6 +538,14 @@ async function loadUsers() {
   } catch { /* the status banner already reports a dead server */ }
 }
 
+async function loadHub() {
+  const get = url => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [users, pin, logs] = await Promise.all([get("/users"), get("/pin"), get("/logs")]);
+  if (users) $("hub-face").textContent = users.length === 1 ? "1 person registered" : `${users.length} people registered`;
+  if (pin) $("hub-pin").textContent = !pin.set ? "Not set yet" : pin.length ? `Set · ${pin.length} digits` : "Set";
+  if (logs) $("hub-logs").textContent = logs.length ? `Last attempt ${when(logs[0].timestamp)}` : "No attempts yet";
+}
+
 async function removeUser(u) {
   if (!confirm(`Remove ${u.name}? Their face data is deleted and they can no longer unlock the door with their face.`)) return;
   try {
@@ -489,11 +560,15 @@ async function removeUser(u) {
 }
 
 // "/" is home, "/door" the door page, "/register" the registration page; all serve this file.
-const PAGE = ["register", "door", "passcode"].find(p => location.pathname.startsWith("/" + p)) ?? "home";
+// /register/<sub> pages each show one part of Registration.
+const [, TOP, SUB] = location.pathname.split("/");
+const PAGE = TOP === "register" && SUB ? { face: "face", fingerprint: "fingerprint", passcode: "pin", logs: "logs" }[SUB]
+           : ["register", "door", "passcode"].includes(TOP) ? TOP : "home";
 document.querySelectorAll("[data-page]").forEach(el => el.hidden = !el.dataset.page.split(" ").includes(PAGE));
 $("nav-" + PAGE)?.setAttribute("aria-current", "page");
-if (PAGE === "register") document.title = "Registration · Door Access Console";
-const READY_TEXT = PAGE === "register" ? "Type a name, then enroll the person at the camera." : "Open this page from Start door unlock to scan your face, or enter the door passcode.";
+const TITLES = { register: "Registration", face: "Face ID", fingerprint: "Fingerprint ID", pin: "Passcode", logs: "Logs" };
+if (TITLES[PAGE]) document.title = TITLES[PAGE] + " · Door Access Console";
+const READY_TEXT = PAGE === "face" ? "Type a name, then enroll the person at the camera." : "Open this page from Start door unlock to scan your face, or enter the door passcode.";
 
 $("panel-enroll").onsubmit = e => {
   e.preventDefault();
@@ -600,7 +675,8 @@ setStatus("idle", "ready", "Ready", READY_TEXT);
 $("status").classList.remove("show");
 loadLogs();
 loadUsers();
-if (PAGE === "register") loadPinState();
+if (PAGE === "pin") { $("panel-setpin").after($("status")); loadPinState(); }
+if (PAGE === "register") loadHub();
 $("lock").onclick = async () => { await fetch("/logout", { method: "POST" }).catch(() => {}); location.assign("/"); };
 if (PAGE === "door" && new URLSearchParams(location.search).has("start")) {
   history.replaceState(null, "", "/door");  // a reload shouldn't start another scan

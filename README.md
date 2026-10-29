@@ -46,7 +46,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout key.pem -out cert.pe
 
 The command prints the address to open on the phone, such as `https://172.16.35.187:8000`. The phone warns that the connection isn't private. Accept the warning once, then allow camera access. On the phone, scans use the phone's front camera. On the Mac, they still use the Mac's camera; open https://localhost:8000 there while the server runs with HTTPS. Anyone on the network can reach the page, so do this only on a network you trust. The certificate lasts 365 days.
 
-Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the list of registered people (with a remove button for each), the door PIN setup and the recent attempts. The home page links to Registration with **Register a person**, and the home icon at the top left returns to the home page. Each page shows the camera view with the result as a banner inside it. The camera only turns on while a scan is running.
+Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) is a hub of cards, each opening its own page: **Face ID** (`/register/face`) enrolls people and lists them with a remove button for each; **Fingerprint ID** (`/register/fingerprint`) is a placeholder until a fingerprint reader is added; **Passcode** (`/register/passcode`) sets the door PIN; **Logs** (`/register/logs`) shows the recent attempts. The home page links to Registration with **Register a person**. The home icon at the top left returns to the home page, and **Registration** next to it returns to the hub. The Door and Face ID pages show the camera view with the result as a banner inside it. The camera only turns on while a scan is running.
 
 **Registration lock**
 
@@ -78,11 +78,11 @@ Once a door PIN is set, the Registration page is locked with the same passcode. 
 
 If the face check fails, click **Enter passcode** at the top of the home page or the Door page. Tap the digits on the keypad, or type them. The keypad checks the passcode as soon as you enter the last digit. For a PIN saved before this feature, tap the check mark or press Enter the first time; after that it checks automatically. A correct passcode returns you to the home page after 2 s.
 
-To set the PIN the first time, open the **Registration** page. In the **Door PIN** panel, type a new PIN of 4 to 12 digits twice and click **Set PIN**. To change it later, use the same panel: it then asks for the current PIN as well, and the button reads **Change PIN**.
+To set the PIN the first time, open **Registration**, then the **Passcode** card. In the **Door PIN** panel, type a new PIN of 4 to 12 digits twice and click **Set PIN**. To change it later, use the same panel: it then asks for the current PIN as well, and the button reads **Change PIN**.
 
 Until a PIN is set, PIN unlock shows "PIN not checked". After 5 wrong PINs in a row, PIN checks are blocked for 30 s. This counts wrong current PINs on the change form too. The PIN is stored as a salted PBKDF2 hash in the `settings` table, never as plain text.
 
-Every attempt appears under **Recent attempts** on the Registration page, with times in your local time zone.
+Every attempt appears under **Recent attempts** on the **Logs** page of Registration, with times in your local time zone.
 
 The page loads its fonts from Google Fonts. Without internet access it falls back to system fonts and still works.
 

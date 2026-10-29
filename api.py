@@ -288,7 +288,10 @@ def page():
 
 
 @app.get("/register", response_class=HTMLResponse)
-def register_page(request: Request):
+@app.get("/register/{sub}", response_class=HTMLResponse)  # face | fingerprint | passcode | logs; JS shows the panels
+def register_page(request: Request, sub: str = ""):
+    if sub not in ("", "face", "fingerprint", "passcode", "logs"):
+        raise HTTPException(404)
     if not unlocked(request):
         return RedirectResponse("/passcode?for=register", 303)
     return page()
