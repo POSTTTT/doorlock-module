@@ -459,13 +459,14 @@ $("panel-enroll").onsubmit = e => {
 };
 $("name").oninput = () => $("name").removeAttribute("aria-invalid");
 
-// Passcode keypad: any length from 4 to 12 digits, so the dots grow as you type instead of giving the length away.
+// Passcode keypad: 4 to 12 digits. Once /pin gives the saved PIN's length, it shows that many dots and checks
+// as soon as they are filled; until then the dots grow as you type and the check mark submits.
 if (PAGE === "passcode") {
-  let code = "", busy = false;
+  let code = "", busy = false, pinLength = null;
   const FOR_REG = new URLSearchParams(location.search).get("for") === "register";  // unlock Registration, not the door
   if (FOR_REG) $("pc-title").textContent = "Enter passcode to open Registration";
   const dots = $("pc-dots"), msg = $("pc-msg");
-  const draw = () => dots.replaceChildren(...Array.from({ length: Math.max(code.length, 4) },
+  const draw = () => dots.replaceChildren(...Array.from({ length: pinLength ?? Math.max(code.length, 4) },
     (_, i) => Object.assign(document.createElement("i"), { className: i < code.length ? "on" : "" })));
   const fail = text => { msg.textContent = text; dots.classList.remove("bad"); void dots.offsetWidth; dots.classList.add("bad"); };
   async function submit() {
@@ -491,9 +492,11 @@ if (PAGE === "passcode") {
     if (busy) return;
     if (k === "ok") return submit();
     msg.textContent = ""; dots.classList.remove("bad");
-    code = k === "del" ? code.slice(0, -1) : code.length < 12 ? code + k : code;
+    code = k === "del" ? code.slice(0, -1) : code.length < (pinLength ?? 12) ? code + k : code;
     draw();
+    if (k !== "del" && code.length === pinLength) submit();
   }
+  fetch("/pin").then(r => r.json()).then(d => { pinLength = d.length; draw(); }).catch(() => {});
   for (const k of [..."123456789", "del", "0", "ok"]) {
     const b = document.createElement("button");
     b.type = "button"; b.dataset.key = k;

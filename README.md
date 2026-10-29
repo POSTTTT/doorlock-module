@@ -76,7 +76,7 @@ Once a door PIN is set, the Registration page is locked with the same passcode. 
 
 **Door PIN**
 
-If the face check fails, click **Enter passcode** at the top of the home page or the Door page. Tap the digits on the keypad, or type them, then tap the check mark or press Enter. A correct passcode returns you to the home page after 2 s.
+If the face check fails, click **Enter passcode** at the top of the home page or the Door page. Tap the digits on the keypad, or type them. The keypad checks the passcode as soon as you enter the last digit. For a PIN saved before this feature, tap the check mark or press Enter the first time; after that it checks automatically. A correct passcode returns you to the home page after 2 s.
 
 To set the PIN the first time, open the **Registration** page. In the **Door PIN** panel, type a new PIN of 4 to 12 digits twice and click **Set PIN**. To change it later, use the same panel: it then asks for the current PIN as well, and the button reads **Change PIN**.
 
@@ -107,7 +107,7 @@ The server listens on the port you gave to uvicorn. Interactive docs are at http
 | POST | `/enroll` 🔒 | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if not enough good shots were captured |
 | POST | `/recognize` | none | `{"result": "granted", "user_id": 1, "name": "Alice", "score": 0.62}` |
 | POST | `/unlock` | `{"pin": "4821"}` | `{"result": "granted"}` or `{"result": "denied"}`; 429 after 5 wrong PINs, 503 if no PIN is set |
-| GET | `/pin` | none | `{"set": true}` if a door PIN is set |
+| GET | `/pin` | none | `{"set": true, "length": 4}`; `set` is true if a door PIN is set, `length` is its digit count (`null` for an older PIN until it is entered correctly once) |
 | POST | `/pin` 🔒 | `{"current": "4821", "new": "5930"}` | `{"set": true}`; `current` is needed only when a PIN is already set; 403 if it is wrong, 422 if `new` is not 4 to 12 digits |
 | GET | `/logs` 🔒 | none | The last 20 attempts, each with `method` (`face` or `password`) |
 | GET | `/preview.jpg` | none | The latest camera frame during a scan, or 404. The `X-Scan` header holds the scan progress as JSON: `{"shots": 2, "want": 3, "live": false, "face": true, "good": true}` |

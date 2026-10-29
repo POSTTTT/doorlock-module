@@ -68,6 +68,8 @@ def check_pin(pin):
         pin_fails["count"] = 0 if ok else pin_fails["count"] + 1
         if pin_fails["count"] >= 5:
             pin_fails["count"], pin_fails["until"] = 0, time.monotonic() + 30
+    if ok and not db.get_setting(face.conn, "door_pin_length"):
+        db.set_setting(face.conn, "door_pin_length", str(len(pin)))  # a PIN saved before lengths were stored
     return ok
 
 
@@ -227,7 +229,9 @@ def logout(request: Request, response: Response):
 
 @app.get("/pin")
 def pin_state():
-    return {"set": pin_set()}
+    """length lets the keypad check as soon as enough digits are typed; None until an older PIN is entered once."""
+    length = db.get_setting(face.conn, "door_pin_length")
+    return {"set": pin_set(), "length": int(length) if length else None}
 
 
 @app.post("/pin", dependencies=[Depends(require_unlocked)])
@@ -237,6 +241,7 @@ def set_pin(body: SetPin, response: Response):
     if not first and not check_pin(body.current):
         raise HTTPException(403, "the current PIN is wrong")
     db.set_setting(face.conn, "door_pin", hash_pin(body.new))
+    db.set_setting(face.conn, "door_pin_length", str(len(body.new)))
     if first:
         start_session(response)  # whoever set the first PIN stays on Registration
     return {"set": True}
