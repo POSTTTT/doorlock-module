@@ -4,6 +4,8 @@ import hmac
 import json
 import os
 import secrets
+import socket
+import sys
 import threading
 import time
 from pathlib import Path
@@ -25,6 +27,24 @@ pin_fails = {"count": 0, "until": 0.0}  # 5 wrong PINs in a row lock PIN checks 
 # shortcut: sessions live in memory, so a server restart locks Registration again; fine for one kiosk.
 sessions = {}  # session cookie token -> expiry (time.monotonic)
 SESSION_S = 15 * 60
+
+
+def network_url():
+    """http://<LAN IP>:<port> when uvicorn was started with --host 0.0.0.0, else None."""
+    # shortcut: reads uvicorn's flags in the "--host 0.0.0.0" form only; use env vars if the start command changes.
+    flag = lambda name, default: sys.argv[sys.argv.index(name) + 1] if name in sys.argv[:-1] else default
+    if flag("--host", "127.0.0.1") != "0.0.0.0":
+        return None
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("8.8.8.8", 80))  # UDP connect sends nothing; it only picks the interface that faces the network
+        except OSError:
+            return None
+        return f"http://{s.getsockname()[0]}:{flag('--port', '8000')}"
+
+
+if url := network_url():
+    print(f"On your phone, open {url}", flush=True)
 
 
 def hash_pin(pin, salt=None):
