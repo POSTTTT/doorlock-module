@@ -31,10 +31,14 @@ On macOS, the first scan asks for camera permission for your terminal app (Termi
 ## Using the web test page
 
 ```sh
+# This Mac only
 .venv/bin/uvicorn api:app --port 8000
+
+# Also reachable from a phone on the same Wi‑Fi
+.venv/bin/uvicorn api:app --host 0.0.0.0 --port 8000
 ```
 
-To use the page from a phone on the same Wi‑Fi, start the server with `--host 0.0.0.0 --port 8000`. It prints the address to open on the phone, such as `http://172.16.35.187:8000`. The scan still uses the Mac's camera. Anyone on the network can reach the page, so do this only on a network you trust.
+The second command prints the address to open on the phone, such as `http://172.16.35.187:8000`. The scan still uses the Mac's camera. Anyone on the network can reach the page, so do this only on a network you trust.
 
 Open http://localhost:8000. The home page has a **Start door unlock** button that opens the Door page. **Door** (`/door`) has the door check and the door PIN. **Registration** (`/register`) has enrollment, the door PIN setup and the recent attempts. Both are linked at the top right. Each of them shows the camera view on the left and a result banner under it. The camera only turns on while a scan is running.
 
