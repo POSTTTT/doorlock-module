@@ -171,6 +171,7 @@
   .dots.bad i { border-color: var(--bad); }
   .pc-msg { margin: 0; min-height: 1.5em; color: var(--muted); font-size: 14px; text-align: center; }
   .keypad { display: grid; grid-template-columns: repeat(3, 76px); gap: 18px 26px; margin-top: 8px; }
+  button, a { touch-action: manipulation; }  /* fast taps on the keypad shouldn't double-tap zoom; pinch zoom still works */
   .keypad button {
     width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2);
     color: var(--text); font: 400 30px var(--sans); cursor: pointer; display: grid; place-items: center;
