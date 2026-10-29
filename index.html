@@ -234,6 +234,8 @@
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
     header { padding: 14px 16px; }
+    aside { display: contents; }  /* lets the enroll form sit above the camera in the single column */
+    section:has(#panel-enroll) { order: -1; }
     .stage { aspect-ratio: 3 / 4; }  /* phones send portrait frames; the first frame sets the exact ratio */
     .status { gap: 12px; padding: 12px 14px; }
     .status svg { width: 26px; height: 26px; }
