@@ -90,6 +90,12 @@
   }
   .hint[hidden] { display: none; }
   .hint b { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; color: var(--warn); white-space: nowrap; }
+  /* Enrollment ring, like iPhone Face ID: a segment lights up for each head direction captured */
+  .ring { position: absolute; top: 68px; left: 16px; width: calc(100% - 32px); height: calc(100% - 84px); pointer-events: none; }
+  .ring[hidden] { display: none; }
+  .ring path { stroke: #ffffff38; stroke-width: 3; transition: stroke .3s; }
+  .ring path.on { stroke: var(--ok); }
+  .stage[data-mode="enroll"] .corners, .stage[data-mode="enroll"][data-state="scanning"] .status { display: none; }
   .stage[data-state="scanning"] .corners { opacity: 1; inset: 10%; animation: breathe 1.6s ease-in-out infinite; }
   .stage[data-state="scanning"] .corners::before { border-color: var(--warn); }
 
@@ -321,6 +327,10 @@
         <p>The camera turns on when you start a door check or enroll someone.</p>
       </div>
       <div class="corners" aria-hidden="true"></div>
+      <svg class="ring" id="ring" viewBox="0 0 100 100" hidden aria-hidden="true">
+        <path id="ring-up" d="M23.6 12.3A46 46 0 0 1 76.4 12.3"/><path id="ring-right" d="M87.7 23.6A46 46 0 0 1 87.7 76.4"/>
+        <path id="ring-down" d="M76.4 87.7A46 46 0 0 1 23.6 87.7"/><path id="ring-left" d="M12.3 76.4A46 46 0 0 1 12.3 23.6"/>
+      </svg>
       <div class="hint" id="hint" hidden aria-live="polite"><span id="hint-text"></span><b id="hint-count"></b></div>
       <div class="status" id="status" aria-live="polite">
         <svg id="status-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
@@ -437,9 +447,13 @@ async function run(url, body, label) {
   }
   setBusy(true);
   $("stage").dataset.state = "scanning";
+  $("stage").dataset.mode = url === "/enroll" ? "enroll" : "check";
+  $("ring").toggleAttribute("hidden", url !== "/enroll");  // an <svg> has no .hidden property
+  const RING = ["up", "right", "down", "left"];
+  RING.forEach(p => $("ring-" + p).classList.remove("on"));
   $("preview").hidden = true;
   $("idle").hidden = false;
-  setStatus("busy", "busy", label + "…", url === "/enroll" ? "Hold still. Small changes in angle between shots help." : "Turn your head slowly left, then right.");
+  setStatus("busy", "busy", label + "…", url === "/enroll" ? "Look straight at the camera, then move your head slowly in a circle." : "Turn your head slowly left, then right.");
   const timer = setInterval(async () => {
     const r = await fetch("/preview.jpg").catch(() => null);
     if (!r?.ok) return;
@@ -450,6 +464,7 @@ async function run(url, body, label) {
     $("hint").hidden = false;
     $("hint-text").textContent = hintFor(info, url === "/enroll");
     $("hint-count").textContent = `${info.shots} of ${info.want}`;
+    RING.forEach(p => $("ring-" + p).classList.toggle("on", !!info.poses?.includes(p)));
   }, 150);
   try {
     const r = await fetch(url + (REMOTE ? "?source=browser" : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
@@ -483,7 +498,7 @@ async function run(url, body, label) {
 function hintFor(info, enrolling) {
   if (!info.face) return "Move into the frame and face the camera";
   if (!info.good) return "Move closer, or find better light";
-  if (enrolling) return "Hold still, then move your head a little between shots";
+  if (enrolling) return info.poses?.includes("center") ? "Move your head slowly in a circle" : "Look straight at the camera";
   return info.live ? "Hold still" : "Turn your head slowly left, then right";
 }
 

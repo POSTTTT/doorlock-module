@@ -54,12 +54,12 @@ Once a door PIN is set, the Registration page is locked with the same passcode. 
 
 **Enroll a person**
 
-1. Open the **Registration** page. Once a door PIN is set, it first asks for that passcode.
+1. Open **Registration**, then the **Face ID** card. Once a door PIN is set, Registration first asks for that passcode.
 2. Type a name. People enrolled from the page get the role `user`. To set another role, use the command line or the API.
-3. Click **Enroll person** and look at the camera.
-4. Move your head a little and change your expression while it takes 8 shots, about 0.4 s apart.
+3. Click **Enroll person** and look straight at the camera. The first good frame is the straight-on shot.
+4. Move your head slowly in a circle, like setting up Face ID on an iPhone. A ring around the camera view has four segments, for up, right, down and left. Each one lights up when a shot with the head turned that way is captured. Enrollment needs all five shots, so a face that doesn't move can't enroll.
 5. Watch the box around your face. It is green when the frame is good enough to use, and red when the face is too small, blurry, or too dark or bright.
-6. On success the banner shows "Alice enrolled" with the new user number. If fewer than 5 good shots were captured within 30 s, it shows "Enrollment failed". Improve the lighting or move closer, then try again.
+6. On success the banner shows "Alice enrolled" with the new user number. If a direction is still missing after 30 s, it shows "Enrollment failed" and names it. Turn your head further that way, or improve the lighting or move closer, then try again. If one direction never fills even when you turn well, lower `TURN` (left and right) or `TILT` (up and down) in `face.py`.
 
 **Door check**
 
@@ -104,7 +104,7 @@ The server listens on the port you gave to uvicorn. Interactive docs are at http
 |---|---|---|---|
 | POST | `/login` | `{"pin": "4821"}` | `{"ok": true}` and a `session` cookie that unlocks the locked endpoints for 15 min; 403 if wrong |
 | POST | `/logout` | none | Ends the session |
-| POST | `/enroll` 🔒 | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if not enough good shots were captured |
+| POST | `/enroll` 🔒 | `{"name": "Alice", "role": "admin"}` | `{"user_id": 1}`, or 422 if the straight-on shot or any of the four head turns wasn't captured |
 | POST | `/recognize` | none | `{"result": "granted", "user_id": 1, "name": "Alice", "score": 0.62}` |
 | POST | `/unlock` | `{"pin": "4821"}` | `{"result": "granted"}` or `{"result": "denied"}`; 429 after 5 wrong PINs, 503 if no PIN is set |
 | GET | `/pin` | none | `{"set": true, "length": 4}`; `set` is true if a door PIN is set, `length` is its digit count (`null` for an older PIN until it is entered correctly once) |

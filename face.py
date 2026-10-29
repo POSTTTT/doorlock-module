@@ -21,6 +21,10 @@ MIN_FACE_PX = 80
 MIN_SHARPNESS = 60.0  # variance of Laplacian on the face crop
 BRIGHTNESS = (50, 210)  # mean gray level of the face crop
 MIN_YAW_RANGE = 0.30  # liveness: how far the head must turn left<->right
+# Enrollment poses, like iPhone Face ID's circle: one straight-on shot, then one per head turn.
+POSES = ("center", "left", "right", "up", "down")
+TURN = 0.18  # yaw change from the straight-on shot that counts as turned left or right
+TILT = 0.08  # pitch change that counts as tilted up or down; tune both if a direction never fills
 FRAME_SKIP = 2  # process every Nth frame to stay fast on CPU
 # An iPhone with Continuity Camera takes index 0 and moves the Mac camera to 1; set CAMERA_INDEX=1 then.
 CAMERA_INDEX = int(os.environ.get("CAMERA_INDEX", 0))
@@ -64,6 +68,24 @@ def yaw(face):
     return (nose[0] - (le[0] + re[0]) / 2) / max(re[0] - le[0], 1e-6)
 
 
+def pitch(face):
+    """Head-tilt proxy from the 5 keypoints: where the nose sits between the eye line (0) and the mouth line (1).
+    Uses vertical distances only, so turning the head left or right doesn't change it."""
+    eyes, mouth = (face.kps[0][1] + face.kps[1][1]) / 2, (face.kps[3][1] + face.kps[4][1]) / 2
+    return (face.kps[2][1] - eyes) / max(mouth - eyes, 1e-6)
+
+
+def pose_of(d_yaw, d_pitch):
+    """Which POSES entry a head at this yaw/pitch change from straight-on is in, by image direction; None in between."""
+    if abs(d_yaw) >= TURN and abs(d_yaw) >= abs(d_pitch):
+        return "right" if d_yaw > 0 else "left"
+    if abs(d_pitch) >= TILT:
+        return "down" if d_pitch > 0 else "up"
+    if abs(d_yaw) < TURN / 2 and abs(d_pitch) < TILT / 2:
+        return "center"
+    return None
+
+
 def mean_embedding(embs):
     v = np.mean(embs, axis=0)
     return v / np.linalg.norm(v)
@@ -78,13 +100,45 @@ def match(emb, matrix, threshold=THRESHOLD):
     return (i if scores[i] >= threshold else None), float(scores[i])
 
 
-def scan(app, cam, want, need_liveness, timeout=10.0, show=None, space=0.0):
+def draw_box(frame, face, good):
+    if face is not None:
+        x1, y1, x2, y2 = face.bbox.astype(int)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0) if good else (0, 0, 255), 2)
+
+
+def scan_poses(app, cam, timeout=30.0, show=None):
+    """Enrollment scan: one good embedding per POSES entry, so a face that never moves can't enroll.
+    Turns are measured from the first good frame, which the person takes looking straight at the camera."""
+    shots, base, n = {}, None, 0
+    deadline = time.time() + timeout
+    while time.time() < deadline and len(shots) < len(POSES):
+        ok, frame = cam.read()
+        if not ok:
+            continue
+        n += 1
+        if n % FRAME_SKIP:
+            continue
+        face = largest_face(app, frame)
+        good = face is not None and quality_ok(frame, face)
+        if good:
+            base = base or (yaw(face), pitch(face))
+            pose = pose_of(yaw(face) - base[0], pitch(face) - base[1])
+            if pose and pose not in shots:
+                shots[pose] = face.normed_embedding
+        if show:
+            draw_box(frame, face, good)
+            show(frame, {"shots": len(shots), "want": len(POSES), "poses": list(shots),
+                         "face": face is not None, "good": bool(good)})
+    return shots
+
+
+def scan(app, cam, want, need_liveness, timeout=10.0, show=None):
     """Read frames until `want` good embeddings (and liveness, if asked) are collected.
 
     Alignment happens inside insightface: the recognition model warps each face to the
     standard ArcFace pose using the eye/nose/mouth keypoints before embedding.
     """
-    embs, yaws, n, last = [], [], 0, 0.0
+    embs, yaws, n = [], [], 0
     deadline = time.time() + timeout
     while time.time() < deadline:
         ok, frame = cam.read()
@@ -97,14 +151,10 @@ def scan(app, cam, want, need_liveness, timeout=10.0, show=None, space=0.0):
         good = face is not None and quality_ok(frame, face)
         if good:
             yaws.append(yaw(face))
-            if time.time() - last >= space:
-                embs.append(face.normed_embedding)
-                last = time.time()
+            embs.append(face.normed_embedding)
         live = not need_liveness or (len(yaws) > 1 and max(yaws) - min(yaws) >= MIN_YAW_RANGE)
         if show:
-            if face is not None:
-                x1, y1, x2, y2 = face.bbox.astype(int)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0) if good else (0, 0, 255), 2)
+            draw_box(frame, face, good)
             show(frame, {"shots": min(len(embs), want), "want": want, "live": bool(live),
                          "face": face is not None, "good": bool(good)})
         if len(embs) >= want and live:
@@ -121,16 +171,19 @@ class FaceModule:
     def reload(self):
         self.ids, self.names, self.matrix = db.load_embeddings(self.conn, MODEL)
 
-    def enroll(self, name, role="user", shots=8, show=None, cam=None):
+    def enroll(self, name, role="user", show=None, cam=None):
         cam = cam or open_camera()
         try:
-            embs, _ = scan(self.app, cam, shots, need_liveness=False, timeout=30, show=show, space=0.4)
+            shots = scan_poses(self.app, cam, show=show)
         finally:
             cam.release()
-        if len(embs) < 5:
-            raise RuntimeError(f"only {len(embs)} good face images captured, need at least 5")
+        if "center" not in shots:
+            raise RuntimeError("no clear face found, look straight at the camera in good light")
+        missing = [p for p in POSES if p not in shots]
+        if missing:
+            raise RuntimeError(f"the head never turned {' or '.join(missing)}, move your head slowly in a circle")
         user_id = db.add_user(self.conn, name, role)
-        db.add_embedding(self.conn, user_id, mean_embedding(embs), MODEL)
+        db.add_embedding(self.conn, user_id, mean_embedding(list(shots.values())), MODEL)
         self.reload()
         return user_id
 
@@ -155,7 +208,8 @@ class FaceModule:
 
 
 def window(frame, info):
-    msg = f"{info['shots']}/{info['want']} " + ("live" if info["live"] else "turn head left and right")
+    todo = "move head in a circle" if "poses" in info else "live" if info["live"] else "turn head left and right"
+    msg = f"{info['shots']}/{info['want']} {todo}"
     cv2.putText(frame, msg, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     cv2.imshow("face", frame)
     cv2.waitKey(1)

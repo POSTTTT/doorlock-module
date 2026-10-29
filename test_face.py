@@ -1,8 +1,8 @@
-"""Checks without a camera: matching, DB round-trip, and real embeddings on insightface's sample photo."""
+"""Checks without a camera: matching, DB round-trip, enrollment poses, and real embeddings on insightface's sample photo."""
 import numpy as np
 
 import db
-from face import MODEL, THRESHOLD, largest_face, load_model, match, mean_embedding
+from face import MODEL, POSES, THRESHOLD, largest_face, load_model, match, mean_embedding, pose_of, scan_poses
 
 
 def unit(v):
@@ -34,6 +34,37 @@ def test_match_and_db():
     assert db.get_setting(conn, "door_pin") == "b"
 
 
+def test_enrollment_poses():
+    assert pose_of(0, 0) == "center"
+    assert pose_of(0.3, 0) == "right" and pose_of(-0.3, 0.05) == "left"
+    assert pose_of(0, 0.2) == "down" and pose_of(0.05, -0.2) == "up"
+    assert pose_of(0.12, 0) is None  # between straight-on and turned
+
+    class Face:  # keypoints: left eye, right eye, nose, mouth corners; the nose moves with the head
+        def __init__(self, dx, dy):
+            self.bbox, self.det_score = np.array([200, 140, 440, 380], float), 0.9
+            nose = [320 + 80 * dx, 260 + 80 * dy]
+            self.kps = np.array([[280, 220], [360, 220], nose, [290, 320], [350, 320]], float)
+            self.normed_embedding = unit(np.random.default_rng(0).normal(size=512)).astype(np.float32)
+
+    class App:
+        def __init__(self, moves):
+            self.moves = iter(moves)
+
+        def get(self, frame):
+            return [Face(*next(self.moves, (0, 0)))]
+
+    class Cam:
+        def read(self):
+            return True, np.random.default_rng(1).integers(40, 220, (480, 640, 3), np.uint8)
+
+    # FRAME_SKIP drops every other frame, so each pose is listed twice.
+    still = scan_poses(App([(0, 0)] * 40), Cam(), timeout=0.5)
+    assert list(still) == ["center"]  # a face that never moves can't fill the other poses
+    circle = [(0, 0)] * 2 + [(0.3, 0)] * 2 + [(-0.3, 0)] * 2 + [(0, -0.2)] * 2 + [(0, 0.2)] * 2
+    assert sorted(scan_poses(App(circle), Cam(), timeout=5)) == sorted(POSES)
+
+
 def test_real_embeddings():
     from insightface.data import get_image
 
@@ -56,5 +87,6 @@ def test_real_embeddings():
 
 if __name__ == "__main__":
     test_match_and_db()
+    test_enrollment_poses()
     test_real_embeddings()
     print("ok")
